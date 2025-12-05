@@ -10,7 +10,7 @@ custom_imports = dict(
 
 
 data_config = {
-    'cams': ['cam_front', 'cam_left', 'cam_right']
+    'cams': ['cam_front']  # 只使用前视相机
 }
 
 root_path = '/data/why/bevfusion/'
@@ -40,8 +40,18 @@ augment3d = {
     'translate': 0.0
 }
 
+# NuScenes标准类别列表
 object_classes = [
-    'truck'
+    'car',
+    'truck',
+    'trailer',
+    'bus',
+    'construction_vehicle',
+    'bicycle',
+    'motorcycle',
+    'pedestrian',
+    'traffic_cone',
+    'barrier'
 ]
 
 model = dict(
@@ -108,14 +118,19 @@ model = dict(
                 score_threshold=0.1,
                 out_size_factor=8,
                 # voxel_size=voxel_size[:2],
-                nms_type=['circle', 'rotate', 'rotate', 'circle', 'rotate', 'rotate'],
+                nms_type=['rotate', 'rotate', 'rotate', 'circle', 'rotate', 'rotate'],
                 pre_max_size=1000,
                 post_max_size=83,
                 nms_thr=0.2,
                 nms_scale=[[1.0], [1.0, 1.0], [1.0, 1.0], [1.0], [1.0, 1.0], [2.5, 4.0]]
             ),
             tasks=[
-                ["car"], ["truck"]
+                ["car"],
+                ["truck", "construction_vehicle"],
+                ["bus", "trailer"],
+                ["barrier"],
+                ["motorcycle", "bicycle"],
+                ["pedestrian", "traffic_cone"]
             ],
             common_heads=dict(
                 reg=[2, 2], height=[1, 2], dim=[3, 2], rot=[2, 2]

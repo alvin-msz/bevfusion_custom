@@ -18,31 +18,48 @@ from ..evaluate.map import calculate_map
 
 @DATASETS.register_module()
 class MyCustomDataset(Custom3DDataset):
+    # NuScenes标准类别映射：将标注中的类别名称映射到NuScenes标准类别
+    # 如果您的标注标签与NuScenes标准一致，可以直接使用标准名称
     NameMapping = {
         "Car": "car",
-        "Truck":"truck",
-        "Pedestrian":"pedestrian",
-        "Lockstation":"lockstation",
-        "Bridge":"bridge",
-        "Lockbox" : "lockbox",
-        "Forklift" : "forklift",
-        "Conetank" : "conetank",
-        "Unknown":"unknown",
-        "Excavator":"excavator"
+        "Truck": "truck",
+        "Trailer": "trailer",
+        "Bus": "bus",
+        "ConstructionVehicle": "construction_vehicle",
+        "Bicycle": "bicycle",
+        "Motorcycle": "motorcycle",
+        "Pedestrian": "pedestrian",
+        "TrafficCone": "traffic_cone",
+        "Barrier": "barrier",
+        # 兼容NuScenes原始格式
+        "vehicle.car": "car",
+        "vehicle.truck": "truck",
+        "vehicle.trailer": "trailer",
+        "vehicle.bus.bendy": "bus",
+        "vehicle.bus.rigid": "bus",
+        "vehicle.construction": "construction_vehicle",
+        "vehicle.bicycle": "bicycle",
+        "vehicle.motorcycle": "motorcycle",
+        "human.pedestrian.adult": "pedestrian",
+        "human.pedestrian.child": "pedestrian",
+        "human.pedestrian.construction_worker": "pedestrian",
+        "human.pedestrian.police_officer": "pedestrian",
+        "movable_object.trafficcone": "traffic_cone",
+        "movable_object.barrier": "barrier",
     }
 
+    # NuScenes标准类别列表（按标准顺序）
     CLASSES = (
         "car",
         "truck",
-        "lockstation",
+        "trailer",
+        "bus",
+        "construction_vehicle",
+        "bicycle",
+        "motorcycle",
         "pedestrian",
-        "bridge",
-        "lockbox",
-        "forklift",
-        "conetank",
-        "unknown",
-        "excavator"
-
+        "traffic_cone",
+        "barrier"
     )
     
     @classmethod

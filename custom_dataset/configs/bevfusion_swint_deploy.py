@@ -15,8 +15,8 @@ image_size = [256, 704]  # 模型输入图像大小
 
 # NuScenes数据集配置
 data_config = {
-    'cams': ['cam_front', 'cam_left', 'cam_right'],
-    'Ncams': 3,  # 修正相机数量为3个
+    'cams': ['cam_front'],  # 只使用前视相机
+    'Ncams': 1,  # 修正相机数量为1个
     'input_size': image_size,  # 输入模型的图像大小 [256, 704]
     'src_size': [1080, 1920],  # 原始图像大小
     'resize': [0.94, 1.06],  # 修正resize范围，避免图像尺寸为0
@@ -50,9 +50,18 @@ augment3d = {
     'translate': 0.5
 }
 
-# NuScenes目标类别
+# NuScenes标准类别列表
 object_classes = [
-    'truck'
+    'car',
+    'truck',
+    'trailer',
+    'bus',
+    'construction_vehicle',
+    'bicycle',
+    'motorcycle',
+    'pedestrian',
+    'traffic_cone',
+    'barrier'
 ]
 
 # 模型配置
@@ -278,15 +287,30 @@ train_pipeline = [
             prepare=dict(
                 filter_by_difficulty=[-1],
                 filter_by_min_points=dict(
-                    # car=5,
+                    car=5,
                     truck=5,
-                    # pedestrian=5
+                    bus=5,
+                    trailer=5,
+                    construction_vehicle=5,
+                    traffic_cone=5,
+                    barrier=5,
+                    motorcycle=5,
+                    bicycle=5,
+                    pedestrian=5
                 )
             ),
             classes=object_classes,
             sample_groups=dict(
-                # car=2,
+                car=2,
                 truck=3,
+                construction_vehicle=7,
+                bus=4,
+                trailer=6,
+                barrier=2,
+                motorcycle=6,
+                bicycle=6,
+                pedestrian=2,
+                traffic_cone=2
             ),
             points_loader=dict(
                 type='LoadPointsFromFile',

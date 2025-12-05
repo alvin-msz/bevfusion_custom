@@ -9,11 +9,20 @@ from custom_dataset.mmdet3d.datasets.custom_dataset import MyCustomDataset
 from mmdet3d.datasets import NuScenesDataset
 import math
 
-# 左边为标注标签                                                         Bridge                                                            Forklift
-class_id = {"Truck" : "truck","Car" : "car","Lockstation" : "lockstation",
-        "Bridge" : "bridge","Forklift" : "forklift","Conetank" : "conetank",
-        "Lockbox" : "lockbox",
-        "ForkLift" : "forkLift","Pedestrian" : "pedestrian"}                                   
+# NuScenes标准类别映射：将标注标签映射到NuScenes标准类别名称
+# 根据您的实际标注标签，修改左侧的键值
+class_id = {
+    "Car": "car",
+    "Truck": "truck",
+    "Trailer": "trailer",
+    "Bus": "bus",
+    "ConstructionVehicle": "construction_vehicle",
+    "Bicycle": "bicycle",
+    "Motorcycle": "motorcycle",
+    "Pedestrian": "pedestrian",
+    "TrafficCone": "traffic_cone",
+    "Barrier": "barrier"
+}                                   
 
 def _read_imageset_file(path):
     try:
@@ -68,28 +77,22 @@ def create_custom_infos(
 def _fill_trainval_infos(root_path, train_scenes, val_scenes, test=False):
 
 
+    # 相机内参矩阵 (3x3) - 请根据您的实际相机标定结果修改
     cam_intrinsic = np.array([625.30933437, 0.0, 961.13004221,
                             0.0, 623.64759937, 546.09541553,
                             0,0,1]).reshape((3,3))
-    cam_front_extrinsic_r = np.array([0.703439089347274, -0.7103943323318405, -0.020487775159276703, -0.009674256462361884])   # w,x,y,z
+    
+    # 前视相机外参 - 请根据您的实际相机标定结果修改
+    # 旋转四元数 (w, x, y, z)
+    cam_front_extrinsic_r = np.array([0.703439089347274, -0.7103943323318405, -0.020487775159276703, -0.009674256462361884])
+    # 平移向量 (x, y, z)
     cam_front_extrinsic_t = np.array([-0.0, 5.1654, 0.891921])
-    # cam_front_extrinsic_r,cam_front_extrinsic_t = correct_camera_coord(cam_front_extrinsic_r,cam_front_extrinsic_t)
-
-    cam_left_extrinsic_r = np.array([0.3532152326674449,-0.3298521727440406,-0.6083741220437878,0.6295375057732218])   # w,x,y,z
-    cam_left_extrinsic_t = np.array([-1.3472,5.0299,1.51004])
-    # cam_left_extrinsic_r,cam_left_extrinsic_t = correct_camera_coord(cam_left_extrinsic_r,cam_left_extrinsic_t)
-
-    cam_right_extrinsic_r = np.array([-0.35289060105342246,0.3575524195433318,-0.6372609494402228,0.5843996691352665])   # w,x,y,z
-    cam_right_extrinsic_t = np.array([1.3472,5.0299,1.51004]) 
-    # cam_right_extrinsic_r,cam_right_extrinsic_t = correct_camera_coord(cam_right_extrinsic_r,cam_right_extrinsic_t) 
+    
+    # 相机外参字典 - 只保留前视相机
     cam_extrinsic_r = {}
     cam_extrinsic_t = {}
-    cam_extrinsic_r ['cam_front'] = cam_front_extrinsic_r
+    cam_extrinsic_r['cam_front'] = cam_front_extrinsic_r
     cam_extrinsic_t['cam_front'] = cam_front_extrinsic_t
-    cam_extrinsic_r ['cam_left'] = cam_left_extrinsic_r
-    cam_extrinsic_t['cam_left'] = cam_left_extrinsic_t
-    cam_extrinsic_r ['cam_right'] = cam_right_extrinsic_r
-    cam_extrinsic_t['cam_right'] = cam_right_extrinsic_t
 
 
     train_kitti_infos = []
@@ -118,10 +121,9 @@ def _fill_trainval_infos(root_path, train_scenes, val_scenes, test=False):
             'timestamp':scenes_id,
         }
 
+        # 只使用前视相机
         camera_types = [
             "cam_front",
-            "cam_left",
-            "cam_right",
         ]        
 
         for cam in camera_types:

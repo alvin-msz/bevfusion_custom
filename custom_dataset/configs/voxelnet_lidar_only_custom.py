@@ -34,8 +34,18 @@ augment3d = {
     'translate': 0.5
 }
 
+# NuScenes标准类别列表
 object_classes = [
-    'truck'
+    'car',
+    'truck',
+    'trailer',
+    'bus',
+    'construction_vehicle',
+    'bicycle',
+    'motorcycle',
+    'pedestrian',
+    'traffic_cone',
+    'barrier'
 ]
 
 model = dict(
@@ -79,7 +89,7 @@ model = dict(
             auxiliary=True,
             in_channels=384,
             hidden_channel=128,
-            num_classes=1,
+            num_classes=10,  # NuScenes标准10个类别
             num_decoder_layers=1,
             num_heads=8,
             nms_kernel_size=3,
