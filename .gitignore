@@ -27,3 +27,7 @@ mmdet3d/ops/**/*.cpython-*.so
 
 output/
 .idea/
+
+data/
+pretrained/
+runs/
