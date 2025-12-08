@@ -3,11 +3,30 @@ from os import path as osp
 import mmcv
 import numpy as np
 from mmcv import track_iter_progress
-from mmdet3d.core.bbox import box_np_ops as box_np_ops
-from mmdet3d.datasets import build_dataset
+# 延迟导入 box_np_ops，避免触发需要编译扩展的依赖
+# from mmdet3d.core.bbox import box_np_ops as box_np_ops
+# 延迟导入 build_dataset，避免触发需要编译扩展的依赖
+# from mmdet3d.datasets import build_dataset
 import torch
 import os
+import sys
 from pathlib import Path
+
+# 添加项目根目录到 Python 路径，以便导入 custom_dataset
+# 获取当前文件的目录，然后向上两级到达项目根目录
+current_dir = osp.dirname(osp.abspath(__file__))
+project_root = osp.dirname(osp.dirname(osp.dirname(current_dir)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# 导入自定义数据集以注册到数据集注册表
+# 注意：如果从 create_data.py 运行，路径已经在 create_data.py 中设置
+# 如果直接导入此模块，路径会在上面设置
+try:
+    from custom_dataset.mmdet3d.datasets.custom_dataset import MyCustomDataset
+except ImportError:
+    # 如果导入失败，说明路径可能还没设置，将在函数内部延迟导入
+    pass
 
 def create_groundtruth_database( 
         dataset_class_name,
@@ -18,6 +37,29 @@ def create_groundtruth_database(
         database_save_path=None,
         db_info_save_path=None,
         with_mask=False):
+    
+    # 延迟导入 build_dataset 和 box_np_ops，避免在模块导入时触发需要编译扩展的依赖
+    # 注意：MyCustomDataset 的导入会在 build_dataset 时自动处理，因为它是通过字符串名称注册的
+    from mmdet3d.datasets import build_dataset
+    from mmdet3d.core.bbox import box_np_ops as box_np_ops
+    
+    # 尝试导入自定义数据集以注册到数据集注册表
+    # 如果导入失败（由于编译扩展问题），build_dataset 仍然可以通过字符串名称找到它
+    try:
+        from custom_dataset.mmdet3d.datasets.custom_dataset import MyCustomDataset
+    except ImportError as e:
+        # 如果导入失败，尝试添加路径并再次导入
+        try:
+            current_dir = osp.dirname(osp.abspath(__file__))
+            project_root = osp.dirname(osp.dirname(osp.dirname(current_dir)))
+            if project_root not in sys.path:
+                sys.path.insert(0, project_root)
+            from custom_dataset.mmdet3d.datasets.custom_dataset import MyCustomDataset
+        except ImportError:
+            # 如果仍然失败，给出警告但继续执行
+            # build_dataset 可能仍然可以通过字符串名称找到数据集类
+            print(f"Warning: Could not import MyCustomDataset: {e}")
+            print("Will try to use dataset by string name 'MyCustomDataset'")
 
     dataset_cfg = dict(
         type=dataset_class_name, dataset_root=root_path, ann_file=info_path
@@ -73,6 +115,16 @@ def create_groundtruth_database(
 
         num_obj = gt_boxes_3d.shape[0]
         # print("num_obj:  ",num_obj)
+        
+        # 跳过没有标注框的样本
+        if num_obj == 0:
+            continue
+        
+        # 检查 gt_boxes_3d 的形状是否正确（应该是 [N, 7]）
+        if gt_boxes_3d.shape[1] != 7:
+            print(f"Warning: Invalid gt_boxes_3d shape {gt_boxes_3d.shape} for sample {image_idx}, expected (N, 7), skipping.")
+            continue
+        
         point_indices = box_np_ops.points_in_rbbox(points, gt_boxes_3d)
 
         for i in range(num_obj):

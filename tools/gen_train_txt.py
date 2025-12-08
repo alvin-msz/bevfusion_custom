@@ -46,9 +46,9 @@ def split_dataset(label_dir, image_sets_dir, split_ratio=0.2):
 
 if __name__ == "__main__":
     # 定义 labels 文件夹和 ImageSets 文件夹的路径
-    label_dir = 'data/20240617-720/labels'
-    image_sets_dir = 'data/20240617-720/ImageSets'
+    label_dir = 'data/custom/labels'
+    image_sets_dir = 'data/custom/ImageSets'
     # 设置划分比例
-    split_ratio = 0.0
+    split_ratio = 0.2
 
     split_dataset(label_dir, image_sets_dir, split_ratio)
