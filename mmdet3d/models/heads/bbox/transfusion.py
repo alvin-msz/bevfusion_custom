@@ -843,9 +843,19 @@ class TransFusionHead(nn.Module):
                         for cls_idx in task["indices"]:
                             task_mask += labels == cls_idx
                         task_mask = task_mask.bool()
+                        
+                        # 根据task索引获取对应的nms_type
+                        if len(nms_types) == 0:
+                            # 如果nms_types为空，使用默认的rotate nms
+                            task_nms_type = "rotate"
+                        elif task_idx < len(nms_types):
+                            task_nms_type = nms_types[task_idx]
+                        else:
+                            # 如果task_idx超出范围，使用第一个nms_type
+                            task_nms_type = nms_types[0] if len(nms_types) > 0 else "rotate"
+                        
                         if task["radius"] > 0:
-                            # 根据task索引获取对应的nms_type
-                            task_nms_type = nms_types[task_idx] if task_idx < len(nms_types) else nms_types[0]
+                            # 使用circle或rotate NMS，根据radius值
                             if task_nms_type == "circle":
                                 boxes_for_nms = torch.cat(
                                     [
@@ -874,7 +884,25 @@ class TransFusionHead(nn.Module):
                                     pre_maxsize=self.test_cfg["pre_maxsize"],
                                     post_max_size=self.test_cfg["post_maxsize"],
                                 )
+                        elif task["radius"] == -1:
+                            # radius=-1表示使用rotate NMS，但不需要radius阈值
+                            # 使用nms_thr作为阈值（如果配置了的话）
+                            nms_thr = self.test_cfg.get("nms_thr", 0.2)
+                            boxes_for_nms = xywhr2xyxyr(
+                                metas[i]["box_type_3d"](
+                                    boxes3d[task_mask][:, :7], 7
+                                ).bev
+                            )
+                            top_scores = scores[task_mask]
+                            task_keep_indices = nms_gpu(
+                                boxes_for_nms,
+                                top_scores,
+                                thresh=nms_thr,
+                                pre_maxsize=self.test_cfg["pre_maxsize"],
+                                post_max_size=self.test_cfg["post_maxsize"],
+                            )
                         else:
+                            # radius <= 0 且不等于-1，跳过NMS，保留所有检测结果
                             task_keep_indices = torch.arange(task_mask.sum())
                         if task_keep_indices.shape[0] != 0:
                             keep_indices = torch.where(task_mask != 0)[0][
