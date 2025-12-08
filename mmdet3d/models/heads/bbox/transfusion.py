@@ -777,12 +777,51 @@ class TransFusionHead(nn.Module):
                     ),
                     dict(num_class=1, class_names=["Cyclist"], indices=[2], radius=0.7),
                 ]
-            elif self.test_cfg["dataset"] == "MyCustomDataset":      # add by 
-                self.tasks = [
-                    dict(num_class=1, class_names=["car"], indices=[0], radius=0.7),
-                    dict(num_class=1, class_names=["truck"], indices=[1], radius=0.7),
-                    dict(num_class=1, class_names=["lockstation"], indices=[2], radius=0.7),
-                ]
+            elif self.test_cfg["dataset"] == "MyCustomDataset":
+                # 根据配置文件中的10个类别进行分组
+                # 类别顺序: car(0), truck(1), trailer(2), bus(3), construction_vehicle(4),
+                #          bicycle(5), motorcycle(6), pedestrian(7), traffic_cone(8), barrier(9)
+                # 根据配置文件中的nms_type和min_radius，将类别分成6个任务组
+                # nms_type=['circle', 'rotate', 'rotate', 'circle', 'rotate', 'rotate']
+                # min_radius=[4, 12, 10, 1, 0.85, 0.175]
+                if "min_radius" in self.test_cfg and len(self.test_cfg["min_radius"]) == 6:
+                    # 如果配置了min_radius，使用配置的半径值
+                    min_radius = self.test_cfg["min_radius"]
+                    # 根据类别特征和min_radius值，将10个类别分成6个任务组
+                    self.tasks = [
+                        dict(num_class=1, class_names=["car"], indices=[0], radius=min_radius[0]),
+                        dict(num_class=1, class_names=["truck"], indices=[1], radius=min_radius[1]),
+                        dict(num_class=1, class_names=["trailer"], indices=[2], radius=min_radius[2]),
+                        dict(num_class=1, class_names=["bus"], indices=[3], radius=min_radius[3]),
+                        dict(num_class=1, class_names=["construction_vehicle"], indices=[4], radius=min_radius[4]),
+                        dict(num_class=5, class_names=["bicycle", "motorcycle", "pedestrian", "traffic_cone", "barrier"], 
+                             indices=[5, 6, 7, 8, 9], radius=min_radius[5]),
+                    ]
+                else:
+                    # 默认配置：参考nuScenes的方式
+                    # 前8个类别（车辆类）作为一个组，使用rotate nms
+                    # pedestrian和traffic_cone单独分组，使用较小的circle nms半径
+                    self.tasks = [
+                        dict(
+                            num_class=8,
+                            class_names=["car", "truck", "trailer", "bus", "construction_vehicle", 
+                                        "bicycle", "motorcycle", "barrier"],
+                            indices=[0, 1, 2, 3, 4, 5, 6, 9],
+                            radius=-1,  # 使用rotate nms
+                        ),
+                        dict(
+                            num_class=1,
+                            class_names=["pedestrian"],
+                            indices=[7],
+                            radius=0.175,
+                        ),
+                        dict(
+                            num_class=1,
+                            class_names=["traffic_cone"],
+                            indices=[8],
+                            radius=0.175,
+                        ),
+                    ]
 
             ret_layer = []
             for i in range(batch_size):
@@ -792,13 +831,22 @@ class TransFusionHead(nn.Module):
                 ## adopt circle nms for different categories
                 if self.test_cfg["nms_type"] != None:
                     keep_mask = torch.zeros_like(scores)
-                    for task in self.tasks:
+                    # 获取nms_type列表，如果是单个字符串则转换为列表
+                    nms_types = self.test_cfg["nms_type"]
+                    if isinstance(nms_types, str):
+                        nms_types = [nms_types] * len(self.tasks)
+                    elif not isinstance(nms_types, list):
+                        nms_types = [nms_types] * len(self.tasks)
+                    
+                    for task_idx, task in enumerate(self.tasks):
                         task_mask = torch.zeros_like(scores)
                         for cls_idx in task["indices"]:
                             task_mask += labels == cls_idx
                         task_mask = task_mask.bool()
                         if task["radius"] > 0:
-                            if self.test_cfg["nms_type"] == "circle":
+                            # 根据task索引获取对应的nms_type
+                            task_nms_type = nms_types[task_idx] if task_idx < len(nms_types) else nms_types[0]
+                            if task_nms_type == "circle":
                                 boxes_for_nms = torch.cat(
                                     [
                                         boxes3d[task_mask][:, :2],
@@ -812,7 +860,7 @@ class TransFusionHead(nn.Module):
                                         task["radius"],
                                     )
                                 )
-                            else:
+                            else:  # rotate nms
                                 boxes_for_nms = xywhr2xyxyr(
                                     metas[i]["box_type_3d"](
                                         boxes3d[task_mask][:, :7], 7

@@ -328,7 +328,7 @@ def _fill_trainval_infos(root_path, train_scenes, val_scenes, test=False):
                     continue
                 gt_boxes.append(np.array(box_values, dtype=np.float32))
                 gt_names.append(class_id[class_name])
-            except (ValueError, IndexError) as e:
+            except (ValueError, IndexError, TypeError) as e:
                 print(f"Warning: Could not parse box values in {label_path}, skipping line: {line}, error: {e}")
                 continue
         
