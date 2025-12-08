@@ -58,7 +58,23 @@ class LoadMultiViewImageFromFiles:
         images = []
         h, w = 0, 0
         for name in filename:
-            images.append(Image.open(name))
+            # Try to open the image file, support both .jpg and .png extensions
+            if os.path.exists(name):
+                images.append(Image.open(name))
+            else:
+                # Try alternative extensions if the file doesn't exist
+                base_name = os.path.splitext(name)[0]
+                found = False
+                for ext in ['.jpg', '.jpeg', '.png', '.JPG', '.JPEG', '.PNG']:
+                    alt_name = base_name + ext
+                    if os.path.exists(alt_name):
+                        images.append(Image.open(alt_name))
+                        found = True
+                        break
+                if not found:
+                    raise FileNotFoundError(
+                        f"Image file not found: {name} (also tried with extensions: .jpg, .jpeg, .png, .JPG, .JPEG, .PNG)"
+                    )
         
         #TODO: consider image padding in waymo
 
